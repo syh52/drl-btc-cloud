@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# GCP credentials
+*.json
+key.json
+service-account.json
+
+# Model files (too large)
+*.zip
+models/
+*.pkl
+*.pt
+*.pth
+
+# Data files
+data/
+*.csv
+*.parquet
+
+# Temp files
+temp/
+tmp/

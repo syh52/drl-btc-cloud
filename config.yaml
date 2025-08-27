@@ -1,0 +1,159 @@
+# DRL BTC 自动交易系统配置文件
+
+# 项目基础配置
+project:
+  name: "drl-btc-cloud"
+  version: "1.0.0"
+  description: "基于深度强化学习的BTC自动交易系统MVP"
+
+# Google Cloud Platform 配置
+gcp:
+  # 项目配置
+  project_id: "ai4fnew"  # 实际项目ID
+  region: "asia-southeast1"       # 统一使用此区域
+  
+  # 存储配置
+  storage:
+    bucket_name: "ai4fnew-drl-btc-20250827"  # 统一bucket名称
+    data_path: "data/"
+    models_path: "models/ppo/"
+    logs_path: "logs/paper/"
+    
+  # Vertex AI 配置
+  vertex_ai:
+    machine_type: "n1-standard-4"
+    python_version: "3.9"
+    container_uri: "gcr.io/cloud-aiplatform/training/pytorch-gpu.1-13.py39:latest"
+    
+  # Cloud Run 配置
+  cloud_run:
+    service_name: "drl-trader"
+    memory: "2Gi"
+    cpu: "2"
+    timeout: "3600s"
+    max_instances: 10
+    
+  # Pub/Sub 配置
+  pubsub:
+    topic_name: "drl-tick"
+    
+  # Cloud Scheduler 配置
+  scheduler:
+    job_name: "every-minute"
+    schedule: "* * * * *"  # 每分钟触发
+    
+  # Eventarc 配置
+  eventarc:
+    trigger_name: "drl-trigger"
+
+# 模型训练配置
+training:
+  # 环境参数
+  environment:
+    lookback: 60              # 历史数据回望长度
+    initial_balance: 10000.0  # 初始资金
+    fee_rate: 0.001           # 交易手续费率
+    max_episode_steps: 5000   # 最大episode长度
+    
+  # PPO算法参数
+  ppo:
+    learning_rate: 0.0003     # 学习率
+    n_steps: 2048             # 每次更新的步数
+    batch_size: 64            # 批次大小
+    n_epochs: 10              # 训练轮数
+    gamma: 0.99               # 折扣因子
+    gae_lambda: 0.95          # GAE参数
+    clip_range: 0.2           # PPO裁剪范围
+    ent_coef: 0.01            # 熵系数
+    vf_coef: 0.5              # 价值函数系数
+    max_grad_norm: 0.5        # 梯度裁剪
+    
+  # 训练流程参数
+  total_timesteps: 100000     # 总训练步数 (MVP: 可先用5000冒烟测试)
+  eval_episodes: 5            # 评估episode数量
+  save_freq: 10000            # 模型保存频率
+
+# 推理服务配置
+inference:
+  # API配置
+  api:
+    host: "0.0.0.0"
+    port: 8080
+    reload: false
+    log_level: "info"
+    
+  # 数据获取配置
+  data_source:
+    default: "mock"           # mock, binance_testnet
+    binance:
+      testnet_url: "https://testnet.binance.vision"
+      api_key_secret: "BINANCE_KEY"
+      api_secret_secret: "BINANCE_SECRET"
+    
+  # 决策日志配置
+  logging:
+    gcs_enabled: true
+    local_enabled: true
+    log_format: "jsonl"
+    retention_days: 30
+
+# 交易配置
+trading:
+  # 支持的交易对
+  symbols:
+    - "BTCUSDT"
+    
+  # 支持的时间间隔
+  intervals:
+    - "1m"
+    - "5m"
+    
+  # 风控参数
+  risk_management:
+    max_position: 1.0         # 最大持仓比例
+    min_position: -1.0        # 最小持仓比例
+    max_drawdown: 0.5         # 最大回撤 (50%)
+    position_threshold: 0.01  # 仓位变化阈值
+    
+  # 纸面交易配置
+  paper_trading:
+    initial_equity: 1.0       # 初始净值
+    fee_rate: 0.001           # 模拟手续费
+    slippage: 0.0001          # 模拟滑点
+
+# 监控和日志配置
+monitoring:
+  # 健康检查
+  health_check:
+    enabled: true
+    interval: 30              # 秒
+    timeout: 10               # 秒
+    
+  # 性能监控
+  performance:
+    track_latency: true
+    track_memory: true
+    track_cpu: true
+    
+  # 错误处理
+  error_handling:
+    max_retries: 3
+    retry_delay: 5            # 秒
+    fallback_to_mock: true    # 数据获取失败时回退到模拟数据
+
+# 开发和调试配置
+development:
+  # 调试模式
+  debug_mode: false
+  
+  # 本地测试配置
+  local_testing:
+    use_mock_data: true
+    skip_gcs_upload: false
+    verbose_logging: true
+    
+  # 快速验证配置 (用于冒烟测试)
+  smoke_test:
+    training_steps: 5000      # 快速训练步数
+    eval_episodes: 2          # 快速评估episode数
+    test_duration: 300        # 测试运行时长 (秒)

@@ -46,18 +46,26 @@ drl-btc-cloud/
 ├── train/                    # 训练模块
 │   ├── btc_env.py            # BTC交易环境(Gymnasium)
 │   ├── train.py              # PPO训练脚本
-│   └── submit_job.py         # Vertex AI任务提交
+│   ├── submit_job.py         # Vertex AI任务提交
+│   └── btc_data.csv          # 训练数据文件
 ├── app/                      # 推理服务
-│   ├── main.py               # FastAPI应用
-│   └── requirements.txt      # 推理依赖
+│   ├── main.py               # 完整版FastAPI应用
+│   ├── main_simple.py        # 简化版FastAPI应用
+│   ├── requirements.txt      # 推理依赖(完整版)
+│   ├── requirements_simple.txt # 推理依赖(简化版)
+│   └── train/                # 训练模块副本(部署用)
+├── models/                   # 模型存储
+│   └── ppo/                  # PPO模型文件
 ├── infra/                    # 基础设施
 │   └── deploy.sh             # 一键部署脚本
+├── fetch_data.py             # 获取真实BTCUSDT数据
+├── generate_mock_data.py     # 生成模拟测试数据
 ├── requirements.txt          # 完整项目依赖
 ├── config.yaml               # 配置文件
 ├── Makefile                  # 常用命令
+├── Overview.md               # 项目概述文档
+├── VERIFICATION.md           # 项目验证指南
 └── README.md                 # 项目文档
-
-注: app/ 目录下还有独立的 requirements.txt，用于 Cloud Run 部署
 ```
 
 ## 🛠️ 快速开始
@@ -72,7 +80,7 @@ drl-btc-cloud/
 ### 1. 克隆并安装
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/syh52/drl-btc-cloud.git
 cd drl-btc-cloud
 
 # 安装依赖 (推荐使用 pip3)
@@ -87,7 +95,19 @@ source venv/bin/activate  # Linux/Mac
 pip3 install -r requirements.txt
 ```
 
-### 2. 环境检查
+### 2. 数据准备
+
+```bash
+# 生成模拟数据 (快速测试)
+python3 generate_mock_data.py --days 30
+
+# 或获取真实数据 (需要网络连接)
+python3 fetch_data.py --days 90
+
+# 数据将保存到 train/btc_data.csv
+```
+
+### 3. 环境检查
 
 ```bash
 # 运行冒烟测试
@@ -97,7 +117,7 @@ make smoke-test
 cd train && python3 btc_env.py
 ```
 
-### 3. 一键部署到GCP
+### 4. 一键部署到GCP
 
 ```bash
 # 运行部署脚本 (交互式配置)
@@ -114,7 +134,7 @@ cd infra && ./deploy.sh
 - 设置Cloud Scheduler定时任务
 - 创建Eventarc触发器
 
-### 4. 训练模型
+### 5. 训练模型
 
 ```bash
 # 提交Vertex AI训练任务
@@ -127,7 +147,7 @@ make train
 make install
 ```
 
-### 5. 启动自动交易
+### 6. 启动自动交易
 
 ```bash
 # 手动触发一次 (测试)
@@ -178,7 +198,43 @@ curl -X POST https://your-service-url/tick \
 
 ## 📊 核心组件详解
 
-### 1. BTC交易环境 (`btc_env.py`)
+### 1. 数据获取模块
+
+#### 真实数据获取 (`fetch_data.py`)
+使用CCXT库从Binance获取真实的BTCUSDT数据：
+
+```bash
+# 获取最近90天数据
+python3 fetch_data.py --days 90
+
+# 获取数据并上传到GCS
+python3 fetch_data.py --days 30 --upload-gcs
+```
+
+特性：
+- 支持指定天数的历史数据获取
+- 自动处理API限制和重试机制
+- 包含基础技术指标计算
+- 支持本地保存和GCS上传
+
+#### 模拟数据生成 (`generate_mock_data.py`)
+快速生成用于测试的模拟比特币数据：
+
+```bash
+# 生成30天模拟数据
+python3 generate_mock_data.py --days 30
+
+# 包含波动率和趋势的模拟数据
+python3 generate_mock_data.py --days 90 --volatility 0.02
+```
+
+特性：
+- 基于随机游走的价格模型
+- 包含真实的价格波动特征
+- 支持自定义波动率参数
+- 生成完整的OHLCV数据
+
+### 2. BTC交易环境 (`btc_env.py`)
 
 基于Gymnasium标准的强化学习环境：
 
@@ -202,7 +258,7 @@ action = [0.5]  # 50%持仓
 obs, reward, done, truncated, info = env.step(action)
 ```
 
-### 2. PPO训练 (`train.py`)
+### 3. PPO训练 (`train.py`)
 
 使用Stable-Baselines3实现的PPO算法：
 
@@ -219,7 +275,13 @@ python train.py --data_csv btc_data.csv --timesteps 100000
 python3 submit_job.py --project_id your-project --bucket your-bucket
 ```
 
-### 3. 推理服务 (`main.py`)
+### 4. 推理服务
+
+#### 完整版服务 (`main.py`)
+功能完整的FastAPI服务，支持完整的模型推理和数据处理。
+
+#### 简化版服务 (`main_simple.py`)
+轻量级版本，用于快速测试和开发：
 
 FastAPI Web服务，提供交易决策API：
 
@@ -240,7 +302,7 @@ FastAPI Web服务，提供交易决策API：
 }
 ```
 
-### 4. 自动化部署 (`deploy.sh`)
+### 5. 自动化部署 (`deploy.sh`)
 
 一键部署脚本包含：
 
@@ -322,6 +384,16 @@ make test
 
 # 代码检查
 python3 train/btc_env.py  # 环境检查
+
+# 本地快速测试流程
+# 1. 生成测试数据
+python3 generate_mock_data.py --days 7
+
+# 2. 快速训练测试
+cd train && python3 train.py --timesteps 1000
+
+# 3. 启动简化版API服务
+cd app && python3 main_simple.py
 ```
 
 ### 自定义扩展
@@ -421,9 +493,9 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ## 📞 联系方式
 
-- 项目维护者: [Your Name]
-- 邮箱: [your.email@example.com]
-- 项目主页: [GitHub Repository URL]
+- 项目维护者: yihang
+- GitHub: [@syh52](https://github.com/syh52)
+- 项目主页: [https://github.com/syh52/drl-btc-cloud](https://github.com/syh52/drl-btc-cloud)
 
 ## 🙏 致谢
 

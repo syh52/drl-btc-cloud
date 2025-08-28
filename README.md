@@ -2,6 +2,15 @@
 
 基于深度强化学习(PPO)的比特币自动交易系统，运行在Google Cloud Platform上，实现"训练→部署→纸面单"的完整闭环。
 
+## 🌟 项目状态
+
+**✅ 已成功部署并运行中!**
+
+- 🎯 **生产环境**: https://drl-trader-veojdmk2ca-as.a.run.app
+- 🔧 **本地Dashboard**: http://localhost:8081/dashboard  
+- 📊 **部署时间**: 2025-08-28
+- 🏷️ **当前版本**: v1.0.0 MVP
+
 ## 📋 项目概述
 
 本项目是一个最小可行产品(MVP)，专注于验证DRL交易策略的可行性。系统使用PPO算法训练交易模型，通过Cloud Run提供推理服务，由Cloud Scheduler每分钟触发进行交易决策记录。
@@ -9,9 +18,11 @@
 ### 🎯 核心目标
 
 - ✅ **训练闭环**: Vertex AI训练PPO模型并保存到GCS
-- ✅ **推理闭环**: Cloud Run加载模型进行实时决策
-- ✅ **触发闭环**: 每分钟自动触发交易决策
-- ✅ **记录闭环**: 完整的纸面交易日志追踪
+- ✅ **推理闭环**: Cloud Run加载模型进行实时决策  
+- ✅ **部署闭环**: 已成功部署到生产环境
+- ✅ **API服务**: RESTful API正常运行
+- ⏳ **模型加载**: PPO模型待训练和部署
+- ⏳ **触发闭环**: 自动调度功能待启用
 
 ### 🚫 MVP范围限制
 
@@ -59,7 +70,6 @@ drl-btc-cloud/
 ├── infra/                    # 基础设施
 │   └── deploy.sh             # 一键部署脚本
 ├── fetch_data.py             # 获取真实BTCUSDT数据
-├── generate_mock_data.py     # 生成模拟测试数据
 ├── requirements.txt          # 完整项目依赖
 ├── config.yaml               # 配置文件
 ├── Makefile                  # 常用命令
@@ -70,38 +80,49 @@ drl-btc-cloud/
 
 ## 🛠️ 快速开始
 
-### 先决条件
+### 🚀 立即体验 (无需安装)
 
+**生产环境已部署运行中，可直接访问：**
+
+```bash
+# 健康检查
+curl https://drl-trader-veojdmk2ca-as.a.run.app/health
+
+# API文档 (Swagger界面)
+https://drl-trader-veojdmk2ca-as.a.run.app/docs
+
+# 系统状态
+curl https://drl-trader-veojdmk2ca-as.a.run.app/status
+```
+
+### 📦 本地开发环境
+
+#### 先决条件
+
+- Python 3.9+ (推荐3.12+) 
 - Google Cloud SDK (`gcloud`)
-- Python 3.9+ (推荐3.12+)
-- Docker (用于Cloud Run部署)
+- Docker (可选，用于容器部署)
 - GCP项目 (已启用计费)
 
-### 1. 克隆并安装
+#### 1. 克隆并安装
 
 ```bash
 git clone https://github.com/syh52/drl-btc-cloud.git
 cd drl-btc-cloud
 
-# 安装依赖 (推荐使用 pip3)
-make install
-# 或
-pip3 install -r requirements.txt
-
-# 注意: 建议在虚拟环境中安装
+# 安装依赖 (推荐使用虚拟环境)
 python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
-# 或 venv\Scripts\activate  # Windows
 pip3 install -r requirements.txt
+
+# 或使用make命令
+make install
 ```
 
 ### 2. 数据准备
 
 ```bash
-# 生成模拟数据 (快速测试)
-python3 generate_mock_data.py --days 30
-
-# 或获取真实数据 (需要网络连接)
+# 获取真实数据 (需要网络连接)
 python3 fetch_data.py --days 90
 
 # 数据将保存到 train/btc_data.csv
@@ -147,17 +168,31 @@ make train
 make install
 ```
 
-### 6. 启动自动交易
+### 6. 测试生产环境API
 
 ```bash
-# 手动触发一次 (测试)
-curl -X POST https://your-service-url/tick \
+# 手动触发交易决策 (已部署的生产服务)
+curl -X POST https://drl-trader-veojdmk2ca-as.a.run.app/tick \
   -H "Content-Type: application/json" \
   -d '{"symbol":"BTCUSDT","interval":"1m"}'
 
-# 启动定时任务 (每分钟自动)
+# 启动定时任务 (需要先完成模型训练)
 gcloud scheduler jobs run every-minute --location=asia-southeast1
 ```
+
+## 🎯 当前部署状态
+
+### ✅ 已完成
+- **Cloud Run服务**: 生产环境正常运行
+- **GCS存储**: 云存储连接正常  
+- **API接口**: 健康检查和文档可访问
+- **本地Dashboard**: 完整可视化界面
+- **基础架构**: Docker容器化部署
+
+### ⏳ 待完成
+- **模型训练**: PPO模型需要训练并上传到GCS
+- **实时数据**: 升级为真实市场数据
+- **自动调度**: 启用Cloud Scheduler定时任务
 
 ## 🔍 监控和管理
 
@@ -217,23 +252,6 @@ python3 fetch_data.py --days 30 --upload-gcs
 - 包含基础技术指标计算
 - 支持本地保存和GCS上传
 
-#### 模拟数据生成 (`generate_mock_data.py`)
-快速生成用于测试的模拟比特币数据：
-
-```bash
-# 生成30天模拟数据
-python3 generate_mock_data.py --days 30
-
-# 包含波动率和趋势的模拟数据
-python3 generate_mock_data.py --days 90 --volatility 0.02
-```
-
-特性：
-- 基于随机游走的价格模型
-- 包含真实的价格波动特征
-- 支持自定义波动率参数
-- 生成完整的OHLCV数据
-
 ### 2. BTC交易环境 (`btc_env.py`)
 
 基于Gymnasium标准的强化学习环境：
@@ -286,7 +304,7 @@ python3 submit_job.py --project_id your-project --bucket your-bucket
 FastAPI Web服务，提供交易决策API：
 
 - **模型管理**: 自动从GCS加载最新模型
-- **数据获取**: 模拟BTC价格数据 (可扩展到真实数据)
+- **数据获取**: 真实BTC价格数据 (通过CCXT从Binance获取)
 - **决策记录**: 同步到Cloud Logging和GCS
 - **健康监控**: 实时状态检查
 
@@ -344,7 +362,7 @@ inference:
   api:
     port: 8080
   data_source:
-    default: "mock"
+    default: "binance"
 
 # GCP配置
 gcp:
@@ -386,8 +404,8 @@ make test
 python3 train/btc_env.py  # 环境检查
 
 # 本地快速测试流程
-# 1. 生成测试数据
-python3 generate_mock_data.py --days 7
+# 1. 获取真实数据
+python3 fetch_data.py --days 7
 
 # 2. 快速训练测试
 cd train && python3 train.py --timesteps 1000
@@ -496,6 +514,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - 项目维护者: yihang
 - GitHub: [@syh52](https://github.com/syh52)
 - 项目主页: [https://github.com/syh52/drl-btc-cloud](https://github.com/syh52/drl-btc-cloud)
+- 生产环境: [https://drl-trader-veojdmk2ca-as.a.run.app](https://drl-trader-veojdmk2ca-as.a.run.app)
 
 ## 🙏 致谢
 

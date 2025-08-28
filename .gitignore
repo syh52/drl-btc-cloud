@@ -53,3 +53,11 @@ data/
 # Temp files
 temp/
 tmp/
+
+# Session files
+*session*.txt
+2025-*-this-session*.txt
+
+# Deployment files
+Dockerfile
+!app/Dockerfile

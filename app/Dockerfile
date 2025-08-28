@@ -4,6 +4,7 @@ FROM python:3.9-slim
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
@@ -15,11 +16,11 @@ COPY requirements.txt .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制训练模块 (需要用于推理)
-COPY ../train /app/train
-
 # 复制应用代码
 COPY . .
+
+# 复制训练模块 (需要用于推理)
+COPY train /app/train
 
 # 设置环境变量
 ENV PORT=8080
@@ -30,4 +31,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # 启动应用
-CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT
+CMD exec uvicorn main_simple:app --host 0.0.0.0 --port $PORT

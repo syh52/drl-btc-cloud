@@ -221,7 +221,7 @@ ENV PORT=8080
 ENV GCS_BUCKET_NAME=$BUCKET_NAME
 
 # 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # 启动应用
@@ -230,15 +230,15 @@ EOF
     
     log_info "部署到Cloud Run..."
     
-    gcloud run deploy $CLOUD_RUN_SERVICE \\
-        --source . \\
-        --region=$REGION \\
-        --allow-unauthenticated \\
-        --memory=2Gi \\
-        --cpu=2 \\
-        --timeout=3600 \\
-        --max-instances=10 \\
-        --set-env-vars="GCS_BUCKET_NAME=$BUCKET_NAME,GOOGLE_CLOUD_PROJECT=$PROJECT_ID" \\
+    gcloud run deploy "$CLOUD_RUN_SERVICE" \
+        --source . \
+        --region="$REGION" \
+        --allow-unauthenticated \
+        --memory=2Gi \
+        --cpu=2 \
+        --timeout=3600 \
+        --max-instances=10 \
+        --set-env-vars="GCS_BUCKET_NAME=$BUCKET_NAME,GOOGLE_CLOUD_PROJECT=$PROJECT_ID" \
         --quiet
     
     # 获取服务URL

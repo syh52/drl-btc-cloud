@@ -8,7 +8,7 @@
 
 - 🎯 **生产环境**: https://drl-trader-veojdmk2ca-as.a.run.app
 - 🔧 **本地Dashboard**: http://localhost:8081/dashboard  
-- 📊 **最后更新**: 2025-08-28
+- 📊 **最后更新**: 2025-08-29
 - 🏷️ **当前版本**: v1.0.0 MVP
 - 🔗 **项目仓库**: https://github.com/syh52/drl-btc-cloud
 - ☁️ **部署区域**: asia-southeast1 (新加坡)

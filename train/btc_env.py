@@ -78,45 +78,9 @@ class BTCTradingEnv(gym.Env):
             return df
             
         except Exception as e:
-            print(f"数据加载失败: {e}")
-            # 如果加载失败，生成模拟数据用于测试
-            return self._generate_mock_data()
+            print(f"❌ 数据加载失败: {e}")
+            raise
     
-    def _generate_mock_data(self) -> pd.DataFrame:
-        """生成模拟BTC数据用于测试"""
-        print("生成模拟BTC数据...")
-        np.random.seed(42)
-        
-        # 生成5000个数据点
-        n_points = 5000
-        
-        # 模拟价格走势 (基于随机游走 + 趋势)
-        price_returns = np.random.normal(0, 0.02, n_points)  # 2%标准差
-        price_returns[0] = 0
-        prices = 50000 * np.exp(np.cumsum(price_returns))  # 起始价格50000
-        
-        # 生成OHLCV数据
-        data = []
-        for i in range(n_points):
-            close_price = prices[i]
-            # 简化模拟: open ≈ 上一个close, high/low 基于波动
-            open_price = prices[i-1] if i > 0 else close_price
-            volatility = abs(price_returns[i])
-            high_price = close_price * (1 + volatility * np.random.uniform(0.5, 1.5))
-            low_price = close_price * (1 - volatility * np.random.uniform(0.5, 1.5))
-            volume = np.random.uniform(100, 1000)
-            
-            data.append({
-                'open': open_price,
-                'high': max(open_price, high_price, close_price),
-                'low': min(open_price, low_price, close_price),
-                'close': close_price,
-                'volume': volume
-            })
-        
-        df = pd.DataFrame(data)
-        df = self._calculate_features(df)
-        return df.dropna().reset_index(drop=True)
     
     def _calculate_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """计算技术指标特征"""

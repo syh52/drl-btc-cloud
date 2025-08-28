@@ -84,7 +84,7 @@ inference:
     
   # 数据获取配置
   data_source:
-    default: "mock"           # mock, binance_testnet
+    default: "binance"        # binance, binance_testnet
     binance:
       testnet_url: "https://testnet.binance.vision"
       api_key_secret: "BINANCE_KEY"
@@ -139,7 +139,7 @@ monitoring:
   error_handling:
     max_retries: 3
     retry_delay: 5            # 秒
-    fallback_to_mock: true    # 数据获取失败时回退到模拟数据
+    fallback_to_mock: false   # 数据获取失败时不再回退，直接报错
 
 # 开发和调试配置
 development:
@@ -148,7 +148,7 @@ development:
   
   # 本地测试配置
   local_testing:
-    use_mock_data: true
+    use_mock_data: false
     skip_gcs_upload: false
     verbose_logging: true
     

@@ -37,18 +37,22 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Google Cloud Platform                   │
+│                  Google Cloud Platform                     │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐    ┌───────────────┐    ┌──────────────┐   │
-│  │ Vertex AI   │───▶│  GCS Storage  │◀───│ Cloud Run    │   │
-│  │ (训练PPO)   │    │  (模型/数据)   │    │ (推理服务)    │   │
+│  │Cloud Run    │───▶│  GCS Storage  │◀───│ Cloud Run    │   │
+│  │(数据获取)    │    │  (模型/数据)   │    │ (推理服务)    │   │
 │  └─────────────┘    └───────────────┘    └──────────────┘   │
-│                             ▲                     ▲         │
-│  ┌─────────────┐            │                     │         │
-│  │Cloud        │    ┌───────────────┐    ┌──────────────┐   │
-│  │Scheduler    │───▶│   Pub/Sub     │───▶│  Eventarc    │   │
-│  │(每分钟)     │    │   (消息队列)   │    │  (触发器)    │   │
-│  └─────────────┘    └───────────────┘    └──────────────┘   │
+│         ▲                    ▲                     ▲        │
+│  ┌─────────────┐    ┌────────────────┐    ┌──────────────┐  │
+│  │  Vertex AI  │    │   Pub/Sub      │───▶│  Eventarc    │  │
+│  │  (训练PPO)  │    │   (消息队列)    │    │  (触发器)    │  │
+│  └─────────────┘    └────────────────┘    └──────────────┘  │
+│                              ▲                              │
+│                     ┌────────────────┐                      │
+│                     │ Cloud Scheduler│                      │
+│                     │   (每分钟)     │                      │
+│                     └────────────────┘                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -240,22 +244,66 @@ curl -X POST https://your-service-url/tick \
 
 ### 1. 数据获取模块
 
-#### 真实数据获取 (`fetch_data.py`)
-使用CCXT库从Binance获取真实的BTCUSDT数据：
+#### 专业的Cloud Run数据获取服务 (`cloudrun-fetch-data/`)
+使用专门的Cloud Run服务从Binance获取大规模历史数据：
 
+**🔧 服务特性：**
+- **云原生设计**: 运行在独立的Cloud Run服务上，专门优化长时间数据获取任务
+- **大数据处理**: 支持获取18个月(540天)的完整历史数据  
+- **多时间周期**: 支持1m、5m、15m、1h、4h、1d等多种K线周期
+- **云环境直连**: 直接连接币安API，无需代理，延迟更低，稳定性更好
+- **智能重试**: 自动处理网络异常和API限制，确保数据完整性
+- **实时监控**: 显示获取进度、ETA和处理状态
+
+**📊 API接口：**
 ```bash
-# 获取最近90天数据
-python3 fetch_data.py --days 90
+# 健康检查
+GET https://data-fetch-service-url/
 
-# 获取数据并上传到GCS
-python3 fetch_data.py --days 30 --upload-gcs
+# 获取历史数据
+POST https://data-fetch-service-url/fetch
+Content-Type: application/json
+{
+  "timeframe": "5m",     # K线周期(1m/5m/15m/1h/4h/1d)
+  "days": 540,           # 获取天数(默认18个月)
+  "save_gcs": true       # 自动保存到GCS
+}
+
+# 也支持GET方式
+GET https://data-fetch-service-url/fetch?timeframe=5m&days=90&save_gcs=true
 ```
 
-特性：
-- 支持指定天数的历史数据获取
-- 自动处理API限制和重试机制
-- 包含基础技术指标计算
-- 支持本地保存和GCS上传
+**💾 数据存储：**
+- **存储位置**: Google Cloud Storage (GCS)
+- **存储路径**: `gs://{bucket_name}/data/btc_data_{timeframe}_{days}d.csv`  
+- **文件格式**: CSV格式，包含完整的OHLCV数据和技术指标
+- **数据结构**: 
+  ```
+  datetime,timestamp,open,high,low,close,volume,returns,ma_short,ma_long,ma_ratio,volatility
+  ```
+- **技术指标**: 自动计算收益率、移动平均线、价格比率、波动率等特征
+
+**🏗️ 技术优势：**
+- **内存优化**: 针对云环境优化的批处理和内存管理
+- **错误容错**: 单批失败不影响整体任务，自动跳过并继续
+- **进度透明**: 实时显示已获取记录数、完成百分比和预计剩余时间
+- **数据质量**: 自动数据清洗，填充缺失值，确保训练数据质量
+
+**📈 典型响应：**
+```json
+{
+  "success": true,
+  "records_count": 155520,
+  "data_shape": [155520, 10],
+  "time_range": {
+    "start": "2023-10-01 00:00:00",
+    "end": "2025-08-27 12:00:00"
+  },
+  "columns": ["timestamp", "open", "high", "low", "close", "volume", "returns", "ma_short", "ma_long", "ma_ratio", "volatility"],
+  "gcs_path": "gs://ai4fnew-drl-btc-20250827/data/btc_data_5m_540d.csv",
+  "processing_time_seconds": 245.6
+}
+```
 
 ### 2. BTC交易环境 (`btc_env.py`)
 

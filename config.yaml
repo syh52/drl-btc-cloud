@@ -48,30 +48,30 @@ gcp:
 
 # 模型训练配置
 training:
-  # 环境参数
-  environment:
-    lookback: 60              # 历史数据回望长度
-    initial_balance: 10000.0  # 初始资金
-    fee_rate: 0.001           # 交易手续费率
-    max_episode_steps: 5000   # 最大episode长度
+  total_timesteps: 100000
+  learning_rate: 3e-4
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  lookback: 60
+  fee_rate: 0.001
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  
+  # 训练数据配置
+  data:
+    symbol: "BTCUSDT"
+    interval: "5m"
+    days: 540  # 18个月历史数据
     
-  # PPO算法参数
-  ppo:
-    learning_rate: 0.0003     # 学习率
-    n_steps: 2048             # 每次更新的步数
-    batch_size: 64            # 批次大小
-    n_epochs: 10              # 训练轮数
-    gamma: 0.99               # 折扣因子
-    gae_lambda: 0.95          # GAE参数
-    clip_range: 0.2           # PPO裁剪范围
-    ent_coef: 0.01            # 熵系数
-    vf_coef: 0.5              # 价值函数系数
-    max_grad_norm: 0.5        # 梯度裁剪
-    
-  # 训练流程参数
-  total_timesteps: 100000     # 总训练步数 (MVP: 可先用5000冒烟测试)
-  eval_episodes: 5            # 评估episode数量
-  save_freq: 10000            # 模型保存频率
+  # 验证配置
+  validation:
+    episodes: 5
+    save_freq: 10000
 
 # 推理服务配置
 inference:
@@ -79,81 +79,69 @@ inference:
   api:
     host: "0.0.0.0"
     port: 8080
-    reload: false
-    log_level: "info"
+    workers: 1
     
-  # 数据获取配置
+  # 数据源配置  
   data_source:
-    default: "binance"        # binance, binance_testnet
-    binance:
-      testnet_url: "https://testnet.binance.vision"
-      api_key_secret: "BINANCE_KEY"
-      api_secret_secret: "BINANCE_SECRET"
+    default: "binance"
+    symbol: "BTCUSDT"
+    interval: "1m"
+    lookback: 60
     
-  # 决策日志配置
-  logging:
-    gcs_enabled: true
-    local_enabled: true
-    log_format: "jsonl"
-    retention_days: 30
+  # 交易配置
+  trading:
+    initial_balance: 10000.0
+    fee_rate: 0.001
+    paper_trading: true
+    
+  # 缓存配置
+  cache:
+    price_update_seconds: 60
+    model_reload_seconds: 300
 
-# 交易配置
-trading:
-  # 支持的交易对
-  symbols:
-    - "BTCUSDT"
+# 数据获取配置 (cloudrun-fetch-data)
+data_fetch:
+  # 币安API配置
+  binance:
+    base_url: "https://api.binance.com"
+    rate_limit: 1200  # 每分钟请求限制
     
-  # 支持的时间间隔
-  intervals:
-    - "1m"
-    - "5m"
+  # 批处理配置
+  batch:
+    size: 1000
+    retry_count: 3
+    retry_delay: 2
     
-  # 风控参数
-  risk_management:
-    max_position: 1.0         # 最大持仓比例
-    min_position: -1.0        # 最小持仓比例
-    max_drawdown: 0.5         # 最大回撤 (50%)
-    position_threshold: 0.01  # 仓位变化阈值
-    
-  # 纸面交易配置
-  paper_trading:
-    initial_equity: 1.0       # 初始净值
-    fee_rate: 0.001           # 模拟手续费
-    slippage: 0.0001          # 模拟滑点
+  # 默认参数
+  defaults:
+    timeframe: "5m"
+    days: 540
+    save_gcs: true
 
 # 监控和日志配置
 monitoring:
-  # 健康检查
-  health_check:
-    enabled: true
-    interval: 30              # 秒
-    timeout: 10               # 秒
+  # Cloud Logging配置
+  logging:
+    level: "INFO"
+    format: "json"
     
-  # 性能监控
-  performance:
-    track_latency: true
-    track_memory: true
-    track_cpu: true
+  # 健康检查配置
+  health:
+    check_interval: 300  # 5分钟
+    timeout: 30
     
-  # 错误处理
-  error_handling:
-    max_retries: 3
-    retry_delay: 5            # 秒
-    fallback_to_mock: false   # 数据获取失败时不再回退，直接报错
+  # 性能指标
+  metrics:
+    collect_system: true
+    collect_trading: true
+    retention_days: 30
 
-# 开发和调试配置
-development:
-  # 调试模式
-  debug_mode: false
-  
-  # 本地测试配置
-  local_testing:
-    use_mock_data: false
-    skip_gcs_upload: false
-    verbose_logging: true
+# 安全配置
+security:
+  # Secret Manager配置
+  secrets:
+    api_keys_secret: "trading-api-keys"
     
-  # 快速验证配置 (用于冒烟测试)
-  smoke_test:
-    training_steps: 5000      # 快速训练步数
-    eval_episodes: 2          # 快速评估episode数
-    test_duration: 300        # 测试运行时长 (秒)
+  # 权限配置
+  iam:
+    service_account: "drl-trader@ai4fnew.iam.gserviceaccount.com"
